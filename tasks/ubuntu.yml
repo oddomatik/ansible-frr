@@ -1,4 +1,39 @@
 ---
+- name: Install FRR apt repo key
+  apt_key:
+    url: https://deb.frrouting.org/frr/keys.asc
+    state: present
+  become: true
+  register: add_repository_key
+  ignore_errors: true
+
+- name: Ensure curl is present (on older systems without SNI).
+  package: name=curl state=present
+  become: true
+  when: add_repository_key is failed
+
+- name: Add FRR apt key (alternative for older systems without SNI).
+  shell: |
+    set -o pipefail
+    curl -sSL https://deb.frrouting.org/frr/keys.asc | sudo apt-key add -
+  args:
+    warn: false
+  become: true
+  when: add_repository_key is failed
+
+- name: Remove Quagga
+  package:
+    name: quagga
+    state: absent
+  become: true    
+
+- name: Install FRR apt repo
+  apt_repository:
+    repo: "{{ frr_apt_repository }}"
+    state: present
+    update_cache: true
+  become: true
+
 - name: Install FRR
   package:
     name:
